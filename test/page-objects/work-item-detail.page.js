@@ -893,6 +893,32 @@ class WorkItemDetailPage extends Page {
   }
 
   /**
+   * Assert an audit entry for `action` carries a detail row for each of
+   * `keys` — the KEYS only, with nothing asserted about their values.
+   *
+   * For rows whose value is management-fe's to format (a GDS-formatted date,
+   * an actor's display name), the presence of the row is the part a spec can
+   * usefully pin: the exact rendering is content design's to tune, while a row
+   * silently disappearing is a regression. Each row in
+   * `detailRowsForAuditEntry` is individually guarded on its source data, so a
+   * projection change that drops one is invisible without this.
+   *
+   * Callers must `expandAllAuditEntryDetails()` first.
+   */
+  async assertAuditDetailRowKeys(action, keys) {
+    const entry = toXPathString(action)
+    for (const key of keys) {
+      const dt = toXPathString(key)
+      await expect(
+        $(
+          `//*[@data-testid="work-item-audit-log"]//li[@data-action=${entry}]` +
+            `//dt[normalize-space(.)=${dt}]`
+        )
+      ).toBeDisplayed()
+    }
+  }
+
+  /**
    * The per-line paragraph texts of a MULTILINE audit detail row, identified
    * by `action` + `key` + a substring of its value.
    *

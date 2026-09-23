@@ -58,6 +58,23 @@ const SLA_EXTENDED_ACTION = 'sla-extended'
  */
 const REASON_ROW_KEY = 'Reason for change'
 
+/**
+ * The supporting rows management-fe projects alongside the reason, in render
+ * order. Their VALUES are deliberately not asserted: the two deadlines render
+ * as GDS-formatted dates and "Changed by" as an actor display name, all of
+ * which are content design's to tune. Their PRESENCE is worth pinning —
+ * `detailRowsForAuditEntry` guards each row individually on its source data,
+ * so a projection that quietly stopped emitting one would otherwise be
+ * invisible. They land on the SAME branch as the reason row, so this couples
+ * nothing that is not already coupled.
+ *
+ * The generic work-item snapshot rows (Org ID, Type, State, Submitted at,
+ * Submitted by, Last modified, Assigned to) are still appended AFTER these,
+ * which is why every assertion here scopes by `<dt>` text and never by row
+ * index.
+ */
+const SUPPORTING_ROW_KEYS = ['Previous deadline', 'New deadline', 'Changed by']
+
 /** management-fe's REASON_MAX_LENGTH (sla.service.js). */
 const REASON_MAX_LENGTH = 500
 
@@ -191,5 +208,13 @@ describe('RA-572 follow-up: reason for change in the application history', () =>
     const rendered = paragraphs.join('\n')
     expect(rendered).not.toContain(SINGLE_LINE_MARKER)
     expect(rendered).not.toContain(MAX_LENGTH_MARKER)
+  })
+
+  it('surfaces the supporting rows alongside the reason', async () => {
+    // Keys only — see SUPPORTING_ROW_KEYS for why the values are not pinned.
+    await detail.assertAuditDetailRowKeys(
+      SLA_EXTENDED_ACTION,
+      SUPPORTING_ROW_KEYS
+    )
   })
 })
