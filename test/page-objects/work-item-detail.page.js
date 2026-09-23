@@ -782,6 +782,50 @@ class WorkItemDetailPage extends Page {
   }
 
   /**
+   * The Application history headings (the bold `actionDisplayName`) for a
+   * backend `action`, in DOM order.
+   *
+   * Reads only the heading rather than the whole `<li>`, because the entry's
+   * "Show details" disclosure carries backend-shaped values — the
+   * notification template key `SlaExtended` among them — which are not user
+   * copy. Scanning those would fail a wording assertion for a reason that has
+   * nothing to do with the content. The `data-action` attribute is likewise
+   * out of reach of `getText()`, so the deliberately-unchanged `sla-extended`
+   * action value cannot trip the caller either.
+   */
+  async auditEntryHeadings(action) {
+    const headings = await $$(
+      `//*[@data-testid="work-item-audit-log"]//li[@data-action=${toXPathString(
+        action
+      )}]//strong`
+    )
+    const texts = []
+    for (const heading of headings) {
+      texts.push(await heading.getText())
+    }
+    return texts
+  }
+
+  /**
+   * RA-572 (AC02), backend slice. Every Application history heading for
+   * `action` describes a CHANGE, with no surviving "extend"/"extended" prose.
+   *
+   * Asserts at least one such entry exists first: against a history that
+   * never gained the entry the absence would hold vacuously, which is exactly
+   * how a wording regression would hide. Callers must drive the action on a
+   * work item the spec itself created — management-be deliberately does not
+   * backfill historical rows, so an item created before the change
+   * legitimately still reads "Determination deadline extended".
+   */
+  async assertNoStaleDeadlineWordingInHistory(action) {
+    const headings = await this.auditEntryHeadings(action)
+    expect(headings.length).toBeGreaterThan(0)
+    for (const heading of headings) {
+      expect(heading).not.toMatch(/extend/i)
+    }
+  }
+
+  /**
    * Like `auditEntriesForAction`, but polls for the entry count to reach
    * `count` rather than checking once. Some pushes are deferred onto a
    * background task queue (e.g. RA-519's status-changed push, RA-368) and

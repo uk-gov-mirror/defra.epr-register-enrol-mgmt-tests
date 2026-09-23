@@ -17,16 +17,21 @@ import { farFutureDeadline } from '../support/sla-extend-date.js'
  * placeholder that the notification hook never supplied, so Notify
  * rejected the send with "Missing personalisation: sla_deadline".
  *
- * Observed through the UI: after a team leader extends the SLA on a
- * re-accreditation work item (which has an operator email and an SLA
- * clock started at payment-received), the audit log gains a
- * "Determination deadline extended email sent" entry (RA-447 CM5 renamed
- * the underlying actionDisplayName from "SLA extended" — confirmed against
- * management-be's own log line: `Sending "Determination deadline extended"
- * notification ... (template="SlaExtended", ...)`; the Notify template id
- * itself is unchanged). In the e2e stack NOTIFY_API_KEY is absent so the
- * NoOpNotifyClient stands in and reports success, which exercises the same
- * notification-sent audit path as production.
+ * Observed through the UI: after a team leader changes the determination
+ * deadline on a re-accreditation work item (which has an operator email and
+ * an SLA clock started at payment-received), the audit log gains a
+ * "Determination deadline changed email sent" entry. In the e2e stack
+ * NOTIFY_API_KEY is absent so the NoOpNotifyClient stands in and reports
+ * success, which exercises the same notification-sent audit path as
+ * production.
+ *
+ * WORDING. RA-447 (CM5) renamed the underlying actionDisplayName from
+ * "SLA extended" to "Determination deadline extended"; an RA-572 follow-up
+ * renames it again to "Determination deadline changed", the notification hook
+ * appending " email sent" to that base itself. Only the display string moved:
+ * the notification template key is still `SlaExtended`, the transition id
+ * still `sla-extend` and the stored audit action still `sla-extended`, so the
+ * Notify template id and every selector here are untouched.
  *
  * The extend itself only succeeds once an SLA clock exists, so the
  * work item is driven to "Assessment in progress" first (payment-received
@@ -71,7 +76,7 @@ describe('RA-201 Extend SLA sends operator notification', () => {
     await login.logout()
   })
 
-  it('records a "Determination deadline extended email sent" audit entry after a successful extend', async () => {
+  it('records a "Determination deadline changed email sent" audit entry after a successful change', async () => {
     await login.login()
 
     await slaExtend.gotoFor(workItemId)
@@ -89,13 +94,13 @@ describe('RA-201 Extend SLA sends operator notification', () => {
     await detail.assertFlashBanner()
 
     // The notification hook fired and the send succeeded, so the audit
-    // log carries the "Determination deadline extended email sent" entry —
-    // proving the extend wires through to a notification end-to-end. (In
+    // log carries the "Determination deadline changed email sent" entry —
+    // proving the change wires through to a notification end-to-end. (In
     // this stack NOTIFY_API_KEY is absent so the NoOpNotifyClient stands
     // in; the sla_deadline placeholder-contract regression itself is
     // guarded by the management-be NotifyTemplateContractTests, which the
     // real GovukNotifyClient would otherwise have 400'd on.)
     await detail.gotoAudit()
-    await detail.assertAuditEntry('Determination deadline extended email sent')
+    await detail.assertAuditEntry('Determination deadline changed email sent')
   })
 })

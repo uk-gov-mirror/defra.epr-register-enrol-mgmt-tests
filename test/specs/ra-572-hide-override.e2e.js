@@ -232,5 +232,26 @@ describe('RA-572 Override retired, Change is the single deadline route', () => {
       // A due-date change is not a transition — the item has not moved state.
       await detail.assertState('Updated')
     })
+
+    // AC02 is not only the form's own copy: the change the regulator just
+    // made is written into the Application history, and that heading is
+    // composed in management-be, which RA-572 had no slice for. QA found the
+    // tab still reading "Determination deadline extended" after the rest of
+    // the journey had been reworded — the one place a regulator still saw the
+    // retired terminology. Runs after the change above because that change IS
+    // the entry under test.
+    it('records the change in the Application history as a CHANGE, not an extension', async () => {
+      await detail.gotoAudit()
+
+      // The stored action value `sla-extended` is deliberately unchanged, so
+      // the entry is still located by it — only the display string moved.
+      expect(await detail.auditEntryHeadings('sla-extended')).toContain(
+        'Determination deadline changed'
+      )
+
+      // ...and no "extend"/"extending"/"extended" prose survives in any
+      // heading for that action.
+      await detail.assertNoStaleDeadlineWordingInHistory('sla-extended')
+    })
   })
 })
