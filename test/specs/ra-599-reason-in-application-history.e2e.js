@@ -11,7 +11,10 @@ import { uniquePostcode } from '../support/unique-postcode.js'
 import { farFutureDeadline } from '../support/sla-extend-date.js'
 
 /**
- * RA-572 follow-up — the "Reason for change" reaches the Application history.
+ * RA-599 — the "Reason for change" reaches the Application history.
+ *
+ * Found as a defect against RA-572 (which reworded this journey from
+ * "extend" to "change") and raised as RA-599 in its own right.
  *
  * QA reported: "the reason for change is not being sent to the application
  * history and is lost." A regulator changing a determination deadline must
@@ -110,7 +113,7 @@ const MAX_LENGTH_REASON = `${MAX_LENGTH_MARKER} `
   .slice(0, REASON_MAX_LENGTH)
   .trimEnd()
 
-describe('RA-572 follow-up: reason for change in the application history', () => {
+describe('RA-599: reason for change in the application history', () => {
   let workItemId
 
   before(async () => {
@@ -206,6 +209,11 @@ describe('RA-572 follow-up: reason for change in the application history', () =>
       MULTILINE_MARKER
     )
     const rendered = paragraphs.join('\n')
+    // The positive comes FIRST and is not decoration. With no reason row at
+    // all the paragraph list is empty and both negatives below hold trivially
+    // — this assertion passed against a pre-fix frontend until this line was
+    // added, which is exactly the vacuous pass it now prevents.
+    expect(rendered).toContain(MULTILINE_MARKER)
     expect(rendered).not.toContain(SINGLE_LINE_MARKER)
     expect(rendered).not.toContain(MAX_LENGTH_MARKER)
   })

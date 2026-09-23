@@ -934,12 +934,21 @@ class WorkItemDetailPage extends Page {
    * that is invisible to a regulator and is not what the assertion is about.
    *
    * Callers must `expandAllAuditEntryDetails()` first.
+   *
+   * The spread before `.map` is load-bearing, not style. WebdriverIO 9 gives
+   * an awaited `$$` its OWN `.map`, which resolves internally and returns a
+   * single promise rather than the array of promises `Promise.all` needs —
+   * passing it straight through throws "object is not iterable". Spreading
+   * first yields a real array, so `Array.prototype.map` applies. Same shape as
+   * `cardRefOrder`/`paginationHrefs` in work-items.page.js.
    */
   async auditDetailRowParagraphs(action, key, valueSubstring) {
     const paragraphs = await $$(
       `${this.auditDetailRowValueXPath(action, key, valueSubstring)}/p`
     )
-    return Promise.all(paragraphs.map(async (p) => (await p.getText()).trim()))
+    return Promise.all(
+      [...paragraphs].map(async (p) => (await p.getText()).trim())
+    )
   }
 
   /**
