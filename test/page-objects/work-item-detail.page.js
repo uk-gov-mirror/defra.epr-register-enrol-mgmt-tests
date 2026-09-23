@@ -848,15 +848,72 @@ class WorkItemDetailPage extends Page {
    * different template cannot satisfy it.
    */
   async assertNotificationDetailRow(action, key, valueSubstring) {
+    await this.assertAuditDetailRow(action, key, valueSubstring)
+  }
+
+  /**
+   * The XPath of the `<dd>` of the detail row whose `<dt>` is exactly `key`,
+   * on an audit entry for `action`, whose value contains `valueSubstring`.
+   *
+   * The substring predicate sits on the `<dd>` rather than on the `<li>` so a
+   * work item carrying SEVERAL entries for the same action (e.g. two
+   * determination-deadline changes) is disambiguated by the row's own content
+   * — no reliance on the audit log's newest-first/oldest-first ordering, which
+   * is management-fe's to decide and not something these specs should pin.
+   *
+   * Action, key and substring are all XPath-escaped via toXPathString so
+   * values containing quotes cannot corrupt the locator.
+   */
+  auditDetailRowValueXPath(action, key, valueSubstring) {
     const entry = toXPathString(action)
     const dt = toXPathString(key)
     const needle = toXPathString(valueSubstring)
+    return (
+      `//*[@data-testid="work-item-audit-log"]//li[@data-action=${entry}]` +
+      `//dt[normalize-space(.)=${dt}]/following-sibling::dd[contains(.,${needle})]`
+    )
+  }
+
+  /**
+   * Assert an audit entry for `action` surfaces a detail row keyed exactly
+   * `key` whose value contains `valueSubstring`.
+   *
+   * The general form of `assertNotificationDetailRow` (which now delegates
+   * here): the detail-row mechanism is not specific to notifications —
+   * management-fe's `detailRowsForAuditEntry` projects rows for many actions,
+   * including the `sla-extended` "Reason for change" row.
+   *
+   * Detail rows live inside the entry's "Show details" disclosure, so callers
+   * must `expandAllAuditEntryDetails()` first.
+   */
+  async assertAuditDetailRow(action, key, valueSubstring) {
     await expect(
-      $(
-        `//*[@data-testid="work-item-audit-log"]//li[@data-action=${entry}]` +
-          `//dt[normalize-space(.)=${dt}]/following-sibling::dd[contains(.,${needle})]`
-      )
+      $(this.auditDetailRowValueXPath(action, key, valueSubstring))
     ).toBeDisplayed()
+  }
+
+  /**
+   * The per-line paragraph texts of a MULTILINE audit detail row, identified
+   * by `action` + `key` + a substring of its value.
+   *
+   * management-fe renders a row flagged `multiline` as one
+   * `<p class="govuk-body">` per line inside the `<dd>` (see audit-log.njk),
+   * rather than as a single run-on string. Returning the paragraphs lets a
+   * spec assert the line structure itself, which `getText()` on the `<dd>`
+   * cannot distinguish from a run-on line reliably.
+   *
+   * Each paragraph is trimmed: a browser normalises a `<textarea>`'s line
+   * breaks to CRLF on form submit (HTML spec), and the template splits on
+   * "\n", so every line but the last can carry a trailing carriage return
+   * that is invisible to a regulator and is not what the assertion is about.
+   *
+   * Callers must `expandAllAuditEntryDetails()` first.
+   */
+  async auditDetailRowParagraphs(action, key, valueSubstring) {
+    const paragraphs = await $$(
+      `${this.auditDetailRowValueXPath(action, key, valueSubstring)}/p`
+    )
+    return Promise.all(paragraphs.map(async (p) => (await p.getText()).trim()))
   }
 
   /**

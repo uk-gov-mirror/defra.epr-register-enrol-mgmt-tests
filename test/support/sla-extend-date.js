@@ -12,18 +12,25 @@
  * without needing to.
  */
 
-export function farFutureDeadlineDate() {
+export function farFutureDeadlineDate(yearsAhead = 2) {
   // Midday rather than midnight: the parts below are read in the runner's
   // local zone while the case header renders in Europe/London, and a midnight
   // instant can straddle the BST boundary into the previous calendar day.
   const date = new Date()
-  date.setFullYear(date.getFullYear() + 2)
+  date.setFullYear(date.getFullYear() + yearsAhead)
   date.setHours(12, 0, 0, 0)
   return date
 }
 
-export function farFutureDeadline() {
-  const date = farFutureDeadlineDate()
+/**
+ * `yearsAhead` exists so a spec can change the SAME work item's deadline more
+ * than once: each change must be strictly after the deadline the PREVIOUS one
+ * set, so a second change needs a date later than the first, not merely a date
+ * later than today. Defaults to the original two years for every existing
+ * caller.
+ */
+export function farFutureDeadline(yearsAhead = 2) {
+  const date = farFutureDeadlineDate(yearsAhead)
   return {
     day: date.getDate(),
     month: date.getMonth() + 1,
